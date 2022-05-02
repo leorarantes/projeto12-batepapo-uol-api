@@ -34,7 +34,7 @@ app.post("/participants", async (req, res) => {
     const validation = userSchema.validate(newUser);
 
     if (validation.error) {
-        res.status(422).send("'name' deve ser string não vazio!");
+        res.status(422).send("'name' must be a non-empty string!");
         return;
     }
 
@@ -65,6 +65,21 @@ app.post("/participants", async (req, res) => {
         mongoClient.close();
     } catch (e) {
         res.status(500).send("An error occured while registering the user!", e);
+        mongoClient.close();
+    }
+});
+
+app.get("/participants", async (req, res) => {
+    try {
+        await mongoClient.connect();
+        db = mongoClient.db("project-12");
+
+        const usersArray = await db.collection("users").find().toArray();
+        res.status(201).send(usersArray);
+
+        mongoClient.close();
+    } catch (e) {
+        res.status(500).send("An error occured while getting the users array!", e);
         mongoClient.close();
     }
 });
