@@ -1,7 +1,7 @@
 import express, { json } from "express";
 import chalk from "chalk";
 import cors from "cors";
-import { MongoClient } from "mongodb";
+import { MongoClient, ObjectId } from "mongodb";
 import dotenv from "dotenv";
 import joi from 'joi'
 import dayjs from "dayjs";
@@ -16,25 +16,16 @@ dotenv.config();
 let db = null;
 const mongoClient = new MongoClient(process.env.MONGO_URI);
 
-// joi
-const userSchema = joi.object({
-    name: joi.string().required(),
-});
-const messageSchema = joi.object({
-    from: joi.string().required(),
-    to: joi.string().required(),
-    text: joi.string().email().required(),
-    type: joi.string().email().required(),
-    time: joi.string().email().required()
-});
-
 
 app.post("/participants", async (req, res) => {
     const newUser = req.body;
+    const userSchema = joi.object({
+        name: joi.string().required(),
+    });
     const validation = userSchema.validate(newUser);
 
     if (validation.error) {
-        res.status(422).send("'name' must be a non-empty string!");
+        res.status(422).send(validation.error.message);
         return;
     }
 
@@ -80,6 +71,53 @@ app.get("/participants", async (req, res) => {
         mongoClient.close();
     } catch (e) {
         res.status(500).send("An error occured while getting the users array!", e);
+        mongoClient.close();
+    }
+});
+
+app.post("/messages", async (req, res) => {
+    const newMessage = req.body;
+    const messageSchema = joi.object({
+        to: joi.string().required(),
+        text: joi.string().required(),
+        type: joi.string().valid("message", "private_message")
+    });
+    const messageValidation = messageSchema.validate(newMessage);
+    if (messageValidation.error) {
+        res.status(422).send(messageValidation.error.message);
+        return;
+    }
+
+    try {
+        await mongoClient.connect();
+        db = mongoClient.db("project-12");
+
+        const from = req.headers.from;
+        const usersArray = await db.collection("users").find().toArray();
+        const fromSchema = joi.array().has({
+            _id: joi.any(),
+            name: joi.string().valid(from),
+            lastStatus: joi.number()
+        });
+        const fromValidation = fromSchema.validate(usersArray);
+        if (fromValidation.error) {
+            res.status(422).send(fromValidation.error.message);
+            return;
+        }
+
+        let hour = dayjs().hour();
+        hour < 10 ? hour = "0" + hour : hour = hour.toString();
+        let minute = dayjs().minute();
+        minute < 10 ? minute = "0" + minute : minute = minute.toString();
+        let second = dayjs().second();
+        second < 10 ? second = "0" + second : second = second.toString();
+        await db.collection("messages").insertOne({from: from, ... newMessage, time: hour + ':' + minute + ':' + second});
+
+        res.sendStatus(201);
+
+        mongoClient.close();
+    } catch (e) {
+        res.status(500).send("An error occured while sending the message!", e);
         mongoClient.close();
     }
 });
