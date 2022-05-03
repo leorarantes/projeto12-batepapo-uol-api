@@ -171,6 +171,40 @@ app.get("/messages", async (req, res) => {
     }
 });
 
+app.post("/status", async (req, res) => {
+    const user = req.headers.user;
+    const userSchema = joi.string().required();
+    const validation = userSchema.validate(user);
+
+    if (validation.error) {
+        res.status(422).send(validation.error.message);
+        return;
+    }
+
+    try {
+        await mongoClient.connect();
+        db = mongoClient.db("project-12");
+
+        const userObj = await db.collection("users").findOne({name: user});
+        if (!userObj) {
+            res.sendStatus(404);
+            return;
+        }
+        else {
+            const usersColection = db.collection("users");
+            await usersColection.updateOne({ 
+                _id: userObj._id 
+            }, { $set: {lastStatus: Date.now()} });
+
+            res.sendStatus(200)
+            mongoClient.close();
+        }
+    }
+    catch(e) {
+        res.status(500).send("An error occured while updating status!", e);
+        mongoClient.close();
+    }
+});
+
 
 app.listen(5000, () => console.log(chalk.bold.green("Server initiated at port 5000")));
-
