@@ -122,6 +122,55 @@ app.post("/messages", async (req, res) => {
     }
 });
 
+app.get("/messages", async (req, res) => {
+    let limit = req.query.limit;
+    if(typeof limit === "string") {
+        limit = parseInt(limit);
+        const limitSchema = joi.number().required();
+        const limitValidation = limitSchema.validate(limit);
+        if (limitValidation.error) {
+            res.status(422).send(limitValidation.error.message);
+            return;
+        }
+    }
+
+    const user = req.headers.user;
+    const userSchema = joi.string().required();
+    const userValidation = userSchema.validate(user);
+    if (userValidation.error) {
+        res.status(422).send(userValidation.error.message);
+        return;
+    }
+
+    try {
+        await mongoClient.connect();
+        db = mongoClient.db("project-12");
+
+        const messagesArray = await db.collection("messages").find().toArray();
+        let messagesList = [];
+        
+        messagesArray.forEach(element => {
+            if(element.user === user || element.to === user || element.to === "Todos") {
+                messagesList.push(element);
+            }
+        });
+
+        if(typeof limit === "undefined" || limit > messagesList.length) {
+            res.status(201).send(messagesList);
+        }
+        else {
+            const aux = messagesList.length - limit;
+            messagesList = messagesList.splice(aux);
+            res.status(201).send(messagesList);
+        }
+
+        mongoClient.close();
+    } catch (e) {
+        res.status(500).send("An error occured while getting the messages array!", e);
+        mongoClient.close();
+    }
+});
+
 
 app.listen(5000, () => console.log(chalk.bold.green("Server initiated at port 5000")));
 
