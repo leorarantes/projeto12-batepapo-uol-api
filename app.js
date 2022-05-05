@@ -50,9 +50,6 @@ app.post("/participants", async (req, res) => {
     }
 
     try {
-        //await mongoClient.connect();
-        //db = mongoClient.db("project-12");
-
         const usersArray = await db.collection("users").find().toArray();
         for(let i=0; i < usersArray.length; i++) {
             if(usersArray[i].name === newUser.name) {
@@ -66,26 +63,17 @@ app.post("/participants", async (req, res) => {
         await db.collection("messages").insertOne({from: newUser.name, to: 'Todos', text: 'entra na sala...', type: 'status', time: hour + ':' + minute + ':' + second});
 
         res.sendStatus(201);
-
-        //mongoClient.close();
     } catch (e) {
         res.status(500).send("An error occured while registering the user!", e);
-        //mongoClient.close();
     }
 });
 
 app.get("/participants", async (req, res) => {
     try {
-        //await mongoClient.connect();
-        //db = mongoClient.db("project-12");
-
         const usersArray = await db.collection("users").find().toArray();
         res.status(201).send(usersArray);
-
-        //mongoClient.close();
     } catch (e) {
         res.status(500).send("An error occured while getting the users array!");
-        //mongoClient.close();
     }
 });
 
@@ -103,9 +91,6 @@ app.post("/messages", async (req, res) => {
     }
 
     try {
-        //await mongoClient.connect();
-        //db = mongoClient.db("project-12");
-
         const from = req.headers.user;
         const usersArray = await db.collection("users").find().toArray();
         const fromSchema = joi.array().has({
@@ -124,10 +109,8 @@ app.post("/messages", async (req, res) => {
 
         res.sendStatus(201);
 
-        //mongoClient.close();
     } catch (e) {
         res.status(500).send("An error occured while sending the message!", e);
-        //mongoClient.close();
     }
 });
 
@@ -152,9 +135,6 @@ app.get("/messages", async (req, res) => {
     }
 
     try {
-        //await mongoClient.connect();
-        //db = mongoClient.db("project-12");
-
         const messagesArray = await db.collection("messages").find().toArray();
         let messagesList = [];
         
@@ -172,11 +152,8 @@ app.get("/messages", async (req, res) => {
             messagesList = messagesList.splice(aux);
             res.status(201).send(messagesList);
         }
-
-        //mongoClient.close();
     } catch (e) {
         res.status(500).send("An error occured while getting the messages array!", e);
-        //mongoClient.close();
     }
 });
 
@@ -191,9 +168,6 @@ app.post("/status", async (req, res) => {
     }
 
     try {
-        //await mongoClient.connect();
-        //db = mongoClient.db("project-12");
-
         const userObj = await db.collection("users").findOne({name: user});
         
         if (!userObj) {
@@ -207,20 +181,14 @@ app.post("/status", async (req, res) => {
             }, { $set: {lastStatus: Date.now()} });
 
             res.sendStatus(200)
-            //mongoClient.close();
         }
     }
     catch(e) {
         res.status(500).send("An error occured while updating status!", e);
-        //mongoClient.close();
     }
 });
 
 setInterval(() => {
-    //const connectPromise = mongoClient.connect();
-    //connectPromise.then(() => {
-        //db = mongoClient.db("project-12");
-        
         const usersCollection = db.collection("users");
         const usersArrayPromise = usersCollection.find().toArray();
         usersArrayPromise.then(usersArray => {
@@ -248,13 +216,6 @@ setInterval(() => {
                 }
             });
         });
-        //usersArrayPromise.catch(e => {
-         //   console.log("An error occured while deleting inactive participants!", e)
-        //});
-    //})
-    //connectPromise.catch(e => {
-       // console.log("An error occured while deleting inactive participants!", e)
-    //});
 }, 15000);
 
 
